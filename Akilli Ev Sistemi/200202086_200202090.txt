@@ -1,0 +1,142 @@
+#include "LiquidCrystal.h"
+#include "Keypad.h"
+#include "Password.h"
+
+String newSifreString;
+char yeniSifre[6];
+
+Password Sifre = Password( "1337" );
+ 
+byte maxSifreLength = 6; 
+byte mevcutSifreLength = 0;
+
+const byte Satirlar=4;
+const byte Sutunlar=3;
+
+ int kirmizi=45;
+ int yesil=46;
+
+char tuslar[Satirlar] [Sutunlar]=
+{
+  {'1', '2', '3'},
+  {'4', '5', '6'},
+  {'7', '8', '9'},
+  {'*', '0', '#'}
+};
+byte satirPins[Satirlar]= {50,51,52,53};
+byte sutunPins[Sutunlar]={49,48,47};
+
+Keypad keypad = Keypad(makeKeymap(tuslar), satirPins, sutunPins, Satirlar, Sutunlar);
+
+
+const int rs=2, en=3, d4=4, d5=5, d6=6, d7=7;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+float temp;
+int lm=A0;
+
+int buzzer = 12;
+int flameSensor = 13;
+
+int hareketSensor = 10;
+int lamp = 11;
+
+void setup() {
+  Serial.begin(9600);
+  lcd.begin(16,2);
+  pinMode(lm,INPUT);
+  analogReference(INTERNAL2V56);
+  
+  
+  pinMode(flameSensor, INPUT);
+  pinMode(buzzer, OUTPUT);
+  
+  pinMode(hareketSensor, INPUT);
+  pinMode(lamp,OUTPUT);
+
+  pinMode(kirmizi,OUTPUT);
+  pinMode(yesil,OUTPUT);
+  
+  
+}
+
+void loop() {
+  char tus = keypad.getKey();
+   if (tus != NO_KEY){
+      
+      switch (tus){
+      case '#': kontrolSifre(); break;
+      case '*': silSifre(); break;
+      default: islemTusNo(tus);
+      }
+   }
+  
+
+
+
+  
+   
+  temp=analogRead(A0);
+  temp=temp*1100/(1024*4.35);
+  
+  if(temp>30){
+    lcd.setCursor(0,5);
+    lcd.print("SICAKLIK ");
+    lcd.print(temp);
+    lcd.print("*C");
+    lcd.print("SICAKLIK YUKSEK!! ");
+    
+  }else if(temp>=20 && temp<=30){
+    lcd.setCursor(0,5);
+    lcd.print("SICAKLIK ");
+    lcd.print(temp);
+    lcd.print("*C");
+    lcd.print("SICAKLIK NORMAL ");
+    
+  }
+  else{
+    lcd.setCursor(0,5);
+    lcd.print("SICAKLIK ");
+    lcd.print(temp);
+    lcd.print("*C");
+    lcd.print("SICAKLIK DUSUK!! ");
+    
+  }
+  
+  
+  if (digitalRead(flameSensor) == HIGH){
+    digitalWrite(buzzer, HIGH);
+    delay(10);
+    digitalWrite(buzzer, LOW);
+  }
+   else if (digitalRead(hareketSensor) == HIGH) {
+    digitalWrite(lamp, HIGH);
+    delay(10);
+    digitalWrite(lamp, LOW);
+
+  }
+  
+}
+void islemTusNo(char tus) {
+   mevcutSifreLength++;
+   Sifre.append(tus);
+   if (mevcutSifreLength == maxSifreLength) {
+      kontrolSifre();
+   } 
+}
+
+void kontrolSifre() {
+   if (Sifre.evaluate()){
+      digitalWrite (yesil, HIGH);
+      digitalWrite (kirmizi, LOW);
+      
+   } else {
+      digitalWrite (kirmizi, HIGH);
+      digitalWrite (yesil, LOW);
+   } 
+   silSifre();
+}
+
+void silSifre() {
+   Sifre.reset(); 
+   mevcutSifreLength = 0; 
+}
